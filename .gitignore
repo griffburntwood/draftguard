@@ -1,0 +1,45 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Secrets — commit only placeholder examples
+.env
+.env.*
+!.env.example
+
+# Local datasets — keep shareable demo examples
+/data/*
+!/data/sample/
+/data/sample/*
+!/data/sample/.gitkeep
+!/data/sample/README.md
+
+# Organizer package and answer key
+sdoc-hackathon-bundle*
+sdoc-hackathon-docker*
+ground_truth.json
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Local clutter
+.DS_Store
+*.log
