@@ -87,3 +87,61 @@ class ExtractedField(BaseModel):
                 "Uncertain fields must have a null normalized value."
             )
         return self
+
+
+class ShipmentRecord(BaseModel):
+    """The seven required fields extracted from one SI or BL."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str = Field(min_length=1)
+    shipper: ExtractedField
+    consignee: ExtractedField
+    notify_party: ExtractedField
+    port_of_loading: ExtractedField
+    port_of_discharge: ExtractedField
+    container_count: ExtractedField
+    gross_weight_kg: ExtractedField
+
+    @model_validator(mode="after")
+    def validate_field_types(self):
+        import math
+
+        text_fields = (
+            "shipper",
+            "consignee",
+            "notify_party",
+            "port_of_loading",
+            "port_of_discharge",
+        )
+
+        for name in text_fields:
+            value = getattr(self, name).normalized_value
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"{name} must contain text.")
+
+        count = self.container_count.normalized_value
+        if count is not None:
+            if type(count) is not int or count < 0:
+                raise ValueError(
+                    "container_count must be a non-negative integer."
+                )
+
+        weight = self.gross_weight_kg.normalized_value
+        if weight is not None:
+            if type(weight) not in (int, float):
+                raise ValueError("gross_weight_kg must be a number.")
+            if not math.isfinite(weight) or weight < 0:
+                raise ValueError(
+                    "gross_weight_kg must be finite and non-negative."
+                )
+
+        for name in ShipmentField:
+            field = getattr(self, name.value)
+            for source in field.evidence:
+                if source.document_id != self.document_id:
+                    raise ValueError(
+                        f"{name.value} evidence refers to another document."
+                    )
+
+        return self
