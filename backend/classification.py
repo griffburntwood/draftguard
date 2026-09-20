@@ -94,43 +94,75 @@ def _matches(text: str, phrases: tuple[str, ...]) -> list[str]:
     return [phrase for phrase in phrases if phrase in matched]
 
 
-def classify_email(email: EmailRecord) -> ClassifiedEmail:
-    """Classify an email using current-request subject and body evidence."""
+_BL = r"\b(?:b/?l|bills? of lading)\b"
+_SI = r"\b(?:si|shipping instructions?)\b"
 
+
+def _request_categories(text: str) -> set[EmailCategory]:
+    """Recognize bounded action phrases before considering topic keywords.
+
+    This remains an English heuristic: indirect requests, negation and unusual
+    wording may require a richer classifier later.
+    """
+    result: set[EmailCategory] = set()
+    clauses = re.split(r"[.!?;]|\bbut\b", text)
+    for clause in clauses:
+        bl = re.search(_BL, clause)
+        # Action must precede the BL reference within the same clause.
+        if bl and re.search(
+            r"\b(?:compare|check|review|verify|confirm)\b.{0,100}" + _BL,
+            clause,
+        ):
+            result.add(EmailCategory.BL_COMPARISON)
+        if re.search(
+            r"\b(?:send|provide|prepare|create|update|submit|issue)\b"
+            r"(?:\s+(?:me|us|the|a|new|updated|your))*\s+" + _SI,
+            clause,
+        ):
+            result.add(EmailCategory.SI_REQUEST)
+        if re.search(
+            r"\b(?:clarify|explain|query|dispute|cancel|correct)\b.{0,80}"
+            r"\b(?:invoice|billing|charges|payment|amount due)\b",
+            clause,
+        ):
+            result.add(EmailCategory.INVOICE_QUERY)
+    # A short follow-up can refer back to documents in the current message.
+    if (re.search(_BL, text) and re.search(_SI, text)
+            and re.search(r"\battached\b", text)
+            and re.search(r"\b(?:check|review|verify) the (?:details|documents|docs)\b", text)):
+        result.add(EmailCategory.BL_COMPARISON)
+    return result
+
+
+def classify_email(email: EmailRecord) -> ClassifiedEmail:
+    """Prefer current body requests, then body topics, then subject evidence."""
     subject = _current_request(email.subject)
     body = _current_request(email.body)
-    scores: dict[EmailCategory, int] = {
-        category: 0 for category, _ in _CATEGORY_RULES
-    }
-    evidence: dict[EmailCategory, list[str]] = {
-        category: [] for category, _ in _CATEGORY_RULES
-    }
+    selected = EmailCategory.GENERAL
+    explanation = "No distinctive current-request category evidence was found."
 
-    for category, phrases in _CATEGORY_RULES:
-        body_matches = _matches(body, phrases)
-        subject_matches = _matches(subject, phrases)
-        scores[category] = len(body_matches) * 3 + len(subject_matches)
-        evidence[category] = [
-            f"body phrase '{phrase}'" for phrase in body_matches
-        ] + [f"subject phrase '{phrase}'" for phrase in subject_matches]
+    for source, text in (("body", body), ("subject", subject)):
+        requests = _request_categories(text)
+        if requests:
+            if len(requests) == 1:
+                selected = next(iter(requests))
+                explanation = f"Explicit {source} request indicates {selected.value}."
+            else:
+                explanation = f"Conflicting explicit {source} requests; classified as GENERAL."
+            break
 
-    category_order = [category for category, _ in _CATEGORY_RULES]
-    selected = max(
-        category_order,
-        key=lambda category: (scores[category], -category_order.index(category)),
-    )
-    if scores[selected] == 0:
-        selected = EmailCategory.GENERAL
-        explanation = "No distinctive current-request category evidence was found."
-    else:
-        explanation = (
-            "Classified from current-request evidence: "
-            + "; ".join(evidence[selected])
-            + "."
-        )
+        evidence = {category: _matches(text, phrases)
+                    for category, phrases in _CATEGORY_RULES}
+        best = max((len(matches) for matches in evidence.values()), default=0)
+        if not best:
+            continue
+        winners = [category for category, matches in evidence.items()
+                   if len(matches) == best]
+        if len(winners) == 1:
+            selected = winners[0]
+            explanation = f"Classified from {source} phrases: " + ", ".join(evidence[selected]) + "."
+        else:
+            explanation = f"Ambiguous {source} category evidence; classified as GENERAL."
+        break
 
-    return ClassifiedEmail(
-        email=email,
-        category=selected,
-        explanation=explanation,
-    )
+    return ClassifiedEmail(email=email, category=selected, explanation=explanation)
