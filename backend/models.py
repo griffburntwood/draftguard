@@ -69,7 +69,7 @@ class ExtractedField(BaseModel):
 
     raw_value: str | None
     normalized_value: str | int | float | None
-    state: ExtractionState
+    state: ExtractionState = Field(strict=False)
     evidence: list[SourceEvidence]
 
     @model_validator(mode="after")
