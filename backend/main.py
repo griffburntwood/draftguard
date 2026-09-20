@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from .comparison_models import DemoComparisonResult
+
 app = FastAPI(
     title="DraftGuard API",
     description="Shipping document review and revision tracking.",
@@ -15,7 +17,7 @@ def health():
     }
 
 
-@app.get("/demo/comparison")
+@app.get("/demo/comparison", response_model=DemoComparisonResult)
 def demo_comparison():
     """Static example for frontend development, not actual processing."""
 
