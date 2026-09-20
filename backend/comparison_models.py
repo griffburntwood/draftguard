@@ -4,7 +4,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .models import ExtractedField, ShipmentField
+from .models import ExtractedField, ExtractionState, ShipmentField
 
 
 class FieldOutcome(str, Enum):
@@ -29,6 +29,19 @@ class FieldComparison(BaseModel):
     bl: ExtractedField
     outcome: FieldOutcome
     explanation: str = Field(min_length=1)
+
+
+    @model_validator(mode="after")
+    def validate_extraction_outcome(self):
+        uncertain = (
+            self.si.state != ExtractionState.EXTRACTED
+            or self.bl.state != ExtractionState.EXTRACTED
+        )
+        if uncertain and self.outcome != FieldOutcome.UNKNOWN:
+            raise ValueError(
+                "Missing, unreadable, or ambiguous values require UNKNOWN."
+            )
+        return self
 
 
 class ComparisonResult(BaseModel):
