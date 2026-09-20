@@ -24,9 +24,9 @@ The demo endpoint does not process documents.
 - Python 3.13 recommended to match the initial setup
 - Node.js and npm will be needed for frontend development
 
-The current Python dependency file was generated on macOS.
-Windows users should use WSL for this initial setup because the
-dependency list includes uvloop.
+The dependency file was generated on macOS.
+uvloop is excluded automatically on Windows.
+Native Windows installation still needs verification by a teammate.
 
 ## Initial Setup — macOS / Linux / WSL
 
@@ -55,11 +55,41 @@ Open:
 
 Stop the server with Control + C.
 
+## Initial Setup — Windows PowerShell
+
+Clone the repository once:
+
+    git clone https://github.com/griffburntwood/draftguard.git
+    cd draftguard
+
+Create an environment using Python 3.13:
+
+    py -3.13 -m venv .venv
+
+Install dependencies and run the backend:
+
+    .\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+    .\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload
+
+These commands use the environment directly, so activation is unnecessary.
+
+Open:
+- Health: http://127.0.0.1:8000/health
+- API documentation: http://127.0.0.1:8000/docs
+- Demo comparison: http://127.0.0.1:8000/demo/comparison
+
+Stop the server with Control + C.
+
+If Python 3.13 is unavailable or installation fails, share the error
+with the team lead before changing dependencies.
+
 ## Starting Work Later
 
-From the repository root:
+On macOS/Linux, activate from the repository root:
 
     source .venv/bin/activate
+
+On Windows, use .\\.venv\\Scripts\\python.exe instead of python.
 
 Before creating a new task branch, ensure your working tree is clean:
 
