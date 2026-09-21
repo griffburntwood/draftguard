@@ -158,6 +158,17 @@ function App() {
         </aside>
       )}
 
+      {comparison.review_reasons.length > 0 && (
+        <section className="review-notice" aria-labelledby="review-heading">
+          <h2 id="review-heading">Review required</h2>
+          <ul>
+            {comparison.review_reasons.map((reason, index) => (
+              <li key={`${index}-${reason}`}>{reason}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="comparison-meta" aria-label="Comparison details">
         <span>SI: {comparison.si_document_id ?? 'Not available'}</span>
         <span>BL: {comparison.bl_document_id ?? 'Not available'}</span>
@@ -191,8 +202,14 @@ function App() {
                   {expanded ? 'Hide evidence' : 'Show evidence'}
                 </button>
               </div>
-              <div>{formatValue(result.si.normalized_value)}</div>
-              <div>{formatValue(result.bl.normalized_value)}</div>
+              <div className="document-value">
+                <span className="document-label">Shipping instructions (SI)</span>
+                <span>{formatValue(result.si.normalized_value)}</span>
+              </div>
+              <div className="document-value">
+                <span className="document-label">Draft bill of lading (BL)</span>
+                <span>{formatValue(result.bl.normalized_value)}</span>
+              </div>
               <div>
                 <span className={`outcome outcome-${result.outcome.toLowerCase()}`}>
                   {result.outcome}

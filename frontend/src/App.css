@@ -227,7 +227,7 @@ button:hover {
   color: #172033;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 960px) {
   .page {
     padding: 2rem 1rem 3rem;
   }
@@ -248,5 +248,54 @@ button:hover {
 
   .evidence-panel {
     grid-template-columns: 1fr;
+  }
+}
+/* Preserve source identity when the comparison becomes a stacked layout. */
+.document-label {
+  display: none;
+}
+
+.document-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.review-notice {
+  margin: 1rem 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid #e8bc45;
+  border-radius: 0.75rem;
+  background: #fff8df;
+  color: #624400;
+}
+
+.review-notice h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.review-notice ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.demo-notice {
+  flex-wrap: wrap;
+}
+
+.comparison-meta,
+.evidence-list {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 960px) {
+  .document-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #526078;
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 }
