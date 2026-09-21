@@ -1,6 +1,7 @@
 """Plain-text document extraction for DraftGuard."""
 
 import math
+import re
 
 from backend.models import (
     ExtractedField,
@@ -23,6 +24,8 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
         "consignee": [
             "Consignee:",
             "Consignee Name:",
+            "Consignee (Non-Negotiable):",
+            "To the Order of:",
         ],
         "notify_party": [
             "Notify Party:",
@@ -31,6 +34,7 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
         "port_of_loading": [
             "Port of Loading:",
             "POL:",
+            "Port of Loading (POL):",
         ],
         "port_of_discharge": [
             "Port of Discharge:",
@@ -39,10 +43,12 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
         "container_count": [
             "Container Count:",
             "No. of Containers:",
+            "Total Containers:",
         ],
         "gross_weight_kg": [
             "Gross Weight:",
             "Gross Weight (kg):",
+            "Gross Wt (kgs):",
         ],
     }
 
@@ -142,7 +148,16 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
 
                 if field_name == "container_count":
                     try:
-                        normalized_value = int(raw_value)
+                        container_expression = re.fullmatch(
+                            r"([0-9]+)\s*[x×]\s*(?:20|40|45)\s*['’′]?\s*(?:HC|HQ|GP|DC)",
+                            raw_value,
+                            flags=re.IGNORECASE,
+                        )
+                        count_text = (
+                            container_expression.group(1)
+                            if container_expression else raw_value
+                        )
+                        normalized_value = int(count_text)
                         if normalized_value < 0:
                             raise ValueError("Negative container count")
                     except ValueError:
