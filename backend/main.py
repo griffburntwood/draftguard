@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 
 from .comparison_models import DemoComparisonResult
+from .processing import process_text_email
+from .processing_models import TextProcessingRequest, TextProcessingResponse
+
 
 app = FastAPI(
     title="DraftGuard API",
@@ -70,3 +73,9 @@ def demo_comparison():
         "defect_fields": ["container_count"],
         "review_reasons": [],
     }
+
+
+@app.post("/process/text", response_model=TextProcessingResponse)
+def process_text(request: TextProcessingRequest):
+    """Process caller-selected SI and BL text; no file loading or OCR."""
+    return process_text_email(request)
