@@ -100,3 +100,10 @@ def demo_comparison():
 def process_text(request: TextProcessingRequest):
     """Process caller-selected SI and BL text; no file loading or OCR."""
     return process_text_email(request)
+
+
+from .upload_api import router as upload_router
+app.include_router(upload_router)
+
+from .review_api import router as review_router
+app.include_router(review_router)

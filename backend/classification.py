@@ -83,6 +83,8 @@ def _current_request(text: str) -> str:
         line for line in text.splitlines() if not line.lstrip().startswith(">")
     )
     current = _REPLY_SEPARATOR.split(without_quotes, maxsplit=1)[0]
+    current = re.sub(r"(?is)warning: this email originated outside.*?attachments\.", "", current)
+    current = re.split(r"(?im)^\s*(?:best regards|kind regards|regards|warm regards|thank you|thanks)[,! .]*$", current, maxsplit=1)[0]
     return _WHITESPACE.sub(" ", current).strip().lower()
 
 
@@ -140,6 +142,29 @@ def classify_email(email: EmailRecord) -> ClassifiedEmail:
     body = _current_request(email.body)
     selected = EmailCategory.GENERAL
     explanation = "No distinctive current-request category evidence was found."
+
+    # Status-only updates should not inherit an unrelated historical subject.
+    general_update = re.search(
+        r"no action required|daily berthing report|list of outstanding bl|"
+        r"happy.{0,30}new year|loading completed|update summary", body
+    )
+    phishing = re.search(r"mailbox.{0,60}storage limit|verify your account.{0,80}deactivation", body)
+    supplied_si = re.search(r"please find(?: attached)? shipping instructions?\b", body)
+    requested_draft = re.search(r"send the draft b/?l.{0,80}for checking", body)
+    if phishing:
+        return ClassifiedEmail(email=email, category=EmailCategory.SPAM, explanation="Account-verification threat resembles phishing.")
+    if general_update and not _request_categories(body):
+        return ClassifiedEmail(email=email, category=EmailCategory.GENERAL, explanation="Current message is an operational update, not a document check request.")
+    if supplied_si and not re.search(r"\b(?:compare|check|review|verify)\b.{0,100}" + _BL, body):
+        return ClassifiedEmail(email=email, category=EmailCategory.SI_REQUEST, explanation="Current message supplies shipping instructions.")
+    if (re.search(_SI, body) and re.search(_BL, body)
+            and re.search(r"\battached\b", body)
+            and re.search(r"\bfor (?:checking|review|verification)\b", body)):
+        return ClassifiedEmail(email=email, category=EmailCategory.BL_COMPARISON, explanation="Attached SI and draft BL are supplied for checking.")
+    if requested_draft:
+        return ClassifiedEmail(email=email, category=EmailCategory.BL_COMPARISON, explanation="Current message requests a draft BL for checking; attachments are validated separately.")
+    if re.search(r"\b(?:do not|don't|no need to) (?:compare|check|review|verify)\b", body) and not re.search(r"\b(?:invoice|send the si)\b", body):
+        return ClassifiedEmail(email=email, category=EmailCategory.GENERAL, explanation="Document-check action is explicitly negated.")
 
     for source, text in (("body", body), ("subject", subject)):
         requests = _request_categories(text)

@@ -143,3 +143,16 @@ finalizing export behavior. Do not invent new evaluator categories.
 
 Label mock responses and synthetic revision scenarios clearly.
 Never present them as results from processing the official dataset.
+
+## 10. Implemented API additions
+
+Comparison responses also contain `review_codes`, a list of the four allowed
+submission reason strings. Processing responses include SHA-256
+`document_hashes`, `submission_entry`, and `review_audit` (default empty).
+See [API.md](API.md) for upload, inbox, and correction request formats.
+
+The current prototype stores up to 10 manually grouped shipment checks in the
+browser. Names are self-reported; this is not authenticated approval. Export
+history before clearing browser data. An unrelated shipment must start a new
+history. Non-comparison submission entries use the sample template convention
+`status: "OK"`, while their internal `comparison` remains null.

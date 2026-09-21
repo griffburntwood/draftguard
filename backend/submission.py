@@ -19,6 +19,14 @@ def _as_comparison_result(
 def _review_reason(comparison: ComparisonResult) -> str | None:
     """Map richer internal uncertainty to the evaluator's four allowed values."""
 
+    if comparison.review_codes:
+        # Prefer explicit document-level causes; ambiguity maps to missing_value.
+        for code in ("wrong_doc_type", "missing_attachment", "unreadable", "missing_value"):
+            if code in comparison.review_codes:
+                return code
+    if comparison.si_document_id is None or comparison.bl_document_id is None:
+        return "missing_attachment"
+
     reasons = " ".join(comparison.review_reasons).casefold()
 
     if "wrong document type" in reasons or "wrong doc type" in reasons:
@@ -54,7 +62,7 @@ def build_submission_entry(
     if classification.category != EmailCategory.BL_COMPARISON:
         return {
             "category": category,
-            "status": None,
+            "status": "OK",
             "review_reason": None,
             "has_defect": False,
             "defect_fields": [],

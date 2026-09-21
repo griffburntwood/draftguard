@@ -129,7 +129,7 @@ class SubmissionTests(unittest.TestCase):
             with self.subTest(category=category):
                 entry = build_submission_entry(classified(category), None)
                 self.assertEqual(entry["category"], category.value)
-                self.assertIsNone(entry["status"])
+                self.assertEqual(entry["status"], "OK")
                 self.assertIsNone(entry["review_reason"])
                 self.assertFalse(entry["has_defect"])
                 self.assertEqual(entry["defect_fields"], [])
