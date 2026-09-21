@@ -299,3 +299,57 @@ button:hover {
     font-weight: 700;
   }
 }
+
+.processing-input {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid #dbe1ec;
+  border-radius: 1rem;
+  background: white;
+}
+
+.processing-input fieldset {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #dbe1ec;
+}
+
+.processing-input label {
+  font-weight: 700;
+}
+
+.processing-input input,
+.processing-input textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #aebbd0;
+  border-radius: 0.5rem;
+  background: white;
+  color: #172033;
+  font: inherit;
+}
+
+.processing-input textarea {
+  resize: vertical;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.comparison-result {
+  margin-top: 2rem;
+}
+
+[role="alert"] {
+  padding: 1rem;
+  border: 1px solid #a81f26;
+  border-radius: 0.5rem;
+  color: #a81f26;
+}

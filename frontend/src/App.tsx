@@ -1,255 +1,104 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import ComparisonView from './ComparisonView'
+import ProcessingForm from './ProcessingForm'
+import { processText } from './api'
+import type {
+  ComparisonResult,
+  ProcessingRequest,
+  ProcessingResponse,
+} from './api'
 import './App.css'
 
-type Value = string | number | null
-
-type Evidence = {
-  document_id: string
-  location: string
-  text: string | null
+type DisplayComparison = ComparisonResult & {
+  is_demo?: boolean
+  notice?: string
 }
 
-type ExtractedField = {
-  raw_value: string | null
-  normalized_value: Value
-  state: 'extracted' | 'missing' | 'unreadable' | 'ambiguous'
-  evidence: Evidence[]
-}
-
-type FieldResult = {
-  field: string
-  si: ExtractedField
-  bl: ExtractedField
-  outcome: 'MATCH' | 'MISMATCH' | 'UNKNOWN'
-  explanation: string
-}
-
-type Comparison = {
-  is_demo: boolean
-  notice: string
-  comparison_id: string
-  email_id: string
-  si_document_id: string | null
-  bl_document_id: string | null
-  status: 'OK' | 'MISMATCH' | 'NEEDS_REVIEW'
-  field_results: FieldResult[]
-  defect_fields: string[]
-  review_reasons: string[]
-}
-
-const fieldLabels: Record<string, string> = {
-  shipper: 'Shipper',
-  consignee: 'Consignee',
-  notify_party: 'Notify party',
-  port_of_loading: 'Port of loading',
-  port_of_discharge: 'Port of discharge',
-  container_count: 'Container count',
-  gross_weight_kg: 'Gross weight (kg)',
-}
-
-function formatValue(value: Value) {
-  return value === null ? 'Not available' : String(value)
-}
-
-function App() {
-  const [comparison, setComparison] = useState<Comparison | null>(null)
+export default function App() {
+  const [comparison, setComparison] = useState<DisplayComparison | null>(null)
+  const [classification, setClassification] =
+    useState<ProcessingResponse['classification'] | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set())
-  const [requestNumber, setRequestNumber] = useState(0)
 
-  useEffect(() => {
-    const controller = new AbortController()
+  function resetResults() {
+    setComparison(null)
+    setClassification(null)
+    setError(null)
+  }
 
-    async function loadComparison() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const response = await fetch('/api/demo/comparison', {
-          signal: controller.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error(`The server returned ${response.status}.`)
-        }
-
-        const data: Comparison = await response.json()
-        setComparison(data)
-      } catch (caughtError) {
-        if (caughtError instanceof DOMException && caughtError.name === 'AbortError') {
-          return
-        }
-
-        setComparison(null)
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : 'Unable to load the comparison.',
-        )
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
-      }
+  async function handleSubmit(request: ProcessingRequest) {
+    setBusy(true)
+    resetResults()
+    try {
+      const result = await processText(request)
+      setClassification(result.classification)
+      setComparison(result.comparison)
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Processing failed. Please retry.',
+      )
+    } finally {
+      setBusy(false)
     }
+  }
 
-    void loadComparison()
-
-    return () => controller.abort()
-  }, [requestNumber])
-
-  function toggleEvidence(field: string) {
-    setExpandedFields((current) => {
-      const next = new Set(current)
-      if (next.has(field)) {
-        next.delete(field)
-      } else {
-        next.add(field)
+  async function loadDemo() {
+    setBusy(true)
+    resetResults()
+    try {
+      const response = await fetch('/api/demo/comparison')
+      if (!response.ok) {
+        throw new Error(`Demo unavailable (HTTP ${response.status}).`)
       }
-      return next
-    })
-  }
-
-  if (loading) {
-    return (
-      <main className="page">
-        <p className="eyebrow">DraftGuard</p>
-        <h1>Loading comparison…</h1>
-        <p>Please wait while the local demo response is loaded.</p>
-      </main>
-    )
-  }
-
-  if (error) {
-    return (
-      <main className="page">
-        <p className="eyebrow">DraftGuard</p>
-        <h1>Comparison unavailable</h1>
-        <p>{error}</p>
-        <button type="button" onClick={() => setRequestNumber((value) => value + 1)}>
-          Retry
-        </button>
-      </main>
-    )
-  }
-
-  if (!comparison) {
-    return null
+      const data: DisplayComparison = await response.json()
+      setComparison(data)
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Unable to load the demo.',
+      )
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <main className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">DraftGuard</p>
-          <h1>Shipping instruction comparison</h1>
-          <p>Compare the source Shipping Instructions (SI) with the draft Bill of Lading (BL).</p>
-        </div>
-        <span className={`status status-${comparison.status.toLowerCase()}`}>
-          {comparison.status.replace('_', ' ')}
-        </span>
-      </header>
+      <p className="eyebrow">DraftGuard</p>
+      <h1>Shipping document review</h1>
 
-      {comparison.is_demo && (
-        <aside className="demo-notice" aria-label="Synthetic demo notice">
-          <strong>Synthetic demo</strong>
-          <span>{comparison.notice}</span>
-        </aside>
+      <ProcessingForm busy={busy} onSubmit={handleSubmit} />
+
+      <p>
+        <button type="button" disabled={busy} onClick={loadDemo}>
+          Load synthetic demo
+        </button>
+      </p>
+
+      {busy && <p role="status">Processing request…</p>}
+      {error && (
+        <p role="alert">
+          {error} Your inputs are preserved; submit again to retry.
+        </p>
       )}
 
-      {comparison.review_reasons.length > 0 && (
-        <section className="review-notice" aria-labelledby="review-heading">
-          <h2 id="review-heading">Review required</h2>
-          <ul>
-            {comparison.review_reasons.map((reason, index) => (
-              <li key={`${index}-${reason}`}>{reason}</li>
-            ))}
-          </ul>
+      {classification && (
+        <section aria-labelledby="classification-heading">
+          <h2 id="classification-heading">Last submitted email</h2>
+          <p><strong>{classification.category}</strong></p>
+          <p>{classification.explanation}</p>
+          {!comparison && (
+            <p>This email was not routed for document comparison.</p>
+          )}
         </section>
       )}
 
-      <section className="comparison-meta" aria-label="Comparison details">
-        <span>SI: {comparison.si_document_id ?? 'Not available'}</span>
-        <span>BL: {comparison.bl_document_id ?? 'Not available'}</span>
-      </section>
-
-      <section className="comparison-table" aria-label="Field comparison">
-        <div className="table-heading">
-          <span>Field</span>
-          <span>Shipping instructions</span>
-          <span>Draft bill of lading</span>
-          <span>Result</span>
-        </div>
-
-        {comparison.field_results.map((result) => {
-          const expanded = expandedFields.has(result.field)
-          const mismatch = result.outcome === 'MISMATCH'
-
-          return (
-            <article
-              className={`field-row ${mismatch ? 'field-row-mismatch' : ''}`}
-              key={result.field}
-            >
-              <div className="field-name">
-                <strong>{fieldLabels[result.field] ?? result.field}</strong>
-                <button
-                  type="button"
-                  className="evidence-toggle"
-                  aria-expanded={expanded}
-                  onClick={() => toggleEvidence(result.field)}
-                >
-                  {expanded ? 'Hide evidence' : 'Show evidence'}
-                </button>
-              </div>
-              <div className="document-value">
-                <span className="document-label">Shipping instructions (SI)</span>
-                <span>{formatValue(result.si.normalized_value)}</span>
-              </div>
-              <div className="document-value">
-                <span className="document-label">Draft bill of lading (BL)</span>
-                <span>{formatValue(result.bl.normalized_value)}</span>
-              </div>
-              <div>
-                <span className={`outcome outcome-${result.outcome.toLowerCase()}`}>
-                  {result.outcome}
-                </span>
-                <p className="explanation">{result.explanation}</p>
-              </div>
-
-              {expanded && (
-                <div className="evidence-panel">
-                  <EvidenceList title="SI source evidence" evidence={result.si.evidence} />
-                  <EvidenceList title="BL source evidence" evidence={result.bl.evidence} />
-                </div>
-              )}
-            </article>
-          )
-        })}
-      </section>
+      {comparison && (
+        <ComparisonView
+          key={comparison.comparison_id}
+          comparison={comparison}
+        />
+      )}
     </main>
   )
 }
-
-function EvidenceList({ title, evidence }: { title: string; evidence: Evidence[] }) {
-  return (
-    <section className="evidence-list">
-      <h2>{title}</h2>
-      {evidence.length === 0 ? (
-        <p>No source evidence is available.</p>
-      ) : (
-        <ul>
-          {evidence.map((item, index) => (
-            <li key={`${item.document_id}-${item.location}-${index}`}>
-              <strong>{item.document_id}</strong>
-              <span>{item.location}</span>
-              {item.text && <q>{item.text}</q>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-export default App
