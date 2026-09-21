@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import ComparisonView from './ComparisonView'
 import ProcessingForm from './ProcessingForm'
-import { processText } from './api'
+import { apiUrl, processText } from './api'
 import type {
   ComparisonResult,
   ProcessingRequest,
@@ -47,7 +47,7 @@ export default function App() {
     setBusy(true)
     resetResults()
     try {
-      const response = await fetch('/api/demo/comparison')
+      const response = await fetch(apiUrl('/demo/comparison'))
       if (!response.ok) {
         throw new Error(`Demo unavailable (HTTP ${response.status}).`)
       }

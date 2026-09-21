@@ -1,3 +1,11 @@
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL?.trim() || '/api'
+).replace(/\/+$/, '')
+
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`
+}
+
 export type EmailRecord = {
   email_id: string
   from: string
@@ -65,7 +73,7 @@ export type ProcessingResponse = {
 export async function processText(
   request: ProcessingRequest,
 ): Promise<ProcessingResponse> {
-  const response = await fetch('/api/process/text', {
+  const response = await fetch(apiUrl('/process/text'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
