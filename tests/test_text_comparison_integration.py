@@ -74,3 +74,39 @@ def test_source_evidence_survives_comparison():
     assert "Container Count: 4" in bl_source["text"]
     assert si_source["location"]
     assert bl_source["location"]
+
+
+def test_negative_container_count_requires_review():
+    text = SI_TEXT.replace("Container Count: 3", "Container Count: -1")
+    result = compare_text(text)
+    assert result["status"] == "NEEDS_REVIEW"
+    field = next(
+        item for item in result["field_results"]
+        if item["field"] == "container_count"
+    )
+    assert field["outcome"] == "UNKNOWN"
+    assert field["bl"]["normalized_value"] is None
+
+
+def test_nonfinite_weight_requires_review():
+    text = SI_TEXT.replace("22,000 KG", "NaN")
+    result = compare_text(text)
+    assert result["status"] == "NEEDS_REVIEW"
+    field = next(
+        item for item in result["field_results"]
+        if item["field"] == "gross_weight_kg"
+    )
+    assert field["outcome"] == "UNKNOWN"
+    assert field["bl"]["normalized_value"] is None
+
+
+def test_conflicting_container_counts_require_review():
+    text = SI_TEXT + "Container Count: 4\n"
+    result = compare_text(text)
+    assert result["status"] == "NEEDS_REVIEW"
+    field = next(
+        item for item in result["field_results"]
+        if item["field"] == "container_count"
+    )
+    assert field["outcome"] == "UNKNOWN"
+    assert field["bl"]["normalized_value"] is None

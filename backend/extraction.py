@@ -1,5 +1,7 @@
 """Plain-text document extraction for DraftGuard."""
 
+import math
+
 from backend.models import (
     ExtractedField,
     ExtractionState,
@@ -53,6 +55,30 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
     extracted = {}
 
     for field_name, possible_labels in labels.items():
+        occurrences = [
+            (number, line)
+            for number, line in enumerate(lines, start=1)
+            if any(
+                line.strip().lower().startswith(label.lower())
+                for label in possible_labels
+            )
+        ]
+        if len(occurrences) > 1:
+            extracted[field_name] = ExtractedField(
+                raw_value="\n".join(line.strip() for _, line in occurrences),
+                normalized_value=None,
+                state=ExtractionState.AMBIGUOUS,
+                evidence=[
+                    SourceEvidence(
+                        document_id=document_id,
+                        location=f"TXT: line {number}",
+                        text=line,
+                    )
+                    for number, line in occurrences
+                ],
+            )
+            continue
+
         for line_number, line in enumerate(lines, start=1):
             stripped_line = line.strip()
 
@@ -117,6 +143,8 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
                 if field_name == "container_count":
                     try:
                         normalized_value = int(raw_value)
+                        if normalized_value < 0:
+                            raise ValueError("Negative container count")
                     except ValueError:
                         extracted[field_name] = ExtractedField(
                             raw_value=raw_value,
@@ -142,6 +170,8 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
 
                     try:
                         normalized_value = float(weight_text)
+                        if not math.isfinite(normalized_value) or normalized_value < 0:
+                            raise ValueError("Invalid gross weight")
 
                         if normalized_value.is_integer():
                             normalized_value = int(normalized_value)
