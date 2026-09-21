@@ -353,3 +353,36 @@ button:disabled {
   border-radius: 0.5rem;
   color: #a81f26;
 }
+
+/* Extend the established DraftGuard palette rather than adding a second theme. */
+:root { --ink: #172033; --muted: #526078; --line: #dbe1ec; --accent: #3157c8; --surface: #fff; }
+.workspace-header { display:flex; justify-content:space-between; gap:2rem; align-items:flex-start; padding-bottom:1.5rem; border-bottom:1px solid var(--line); }
+.workspace-header h1 { font-size:clamp(2rem,5vw,3.75rem); line-height:1.05; letter-spacing:-.04em; margin:1rem 0; }
+.workspace-header p { max-width:640px; color:var(--muted); line-height:1.6; }
+.workspace-badge { border:1px solid var(--line); border-radius:2rem; padding:.75rem 1rem; font-size:.8rem; white-space:nowrap; background:var(--surface); }
+.section-heading { display:flex; justify-content:space-between; gap:1rem; align-items:center; }
+.toolbar { display:flex; flex-wrap:wrap; gap:.75rem; margin:1rem 0; }
+button { min-height:40px; }
+button.secondary { background:#eef3fb; color:#2446a8; border:1px solid #c6d3ef; }
+button.secondary:hover { background:#dce6f8; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline:3px solid #3157c8; outline-offset:3px; }
+.document-inputs { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.document-inputs label { display:block; margin-bottom:.5rem; }
+select, .review-editor input, .review-editor textarea, .review-ack input { padding:.7rem; border:1px solid #aebbd0; border-radius:.5rem; font:inherit; background:white; color:var(--ink); max-width:100%; box-sizing:border-box; }
+.inbox-import, .review-editor, .revision-history, .inbox-results { border:1px solid var(--line); border-radius:1rem; background:var(--surface); padding:1.25rem; margin:1.5rem 0; }
+summary { cursor:pointer; font-weight:700; padding:.5rem 0; min-height:40px; }
+.inbox-import input { display:block; margin:1rem 0; max-width:100%; }
+.review-editor fieldset { display:grid; gap:.75rem; min-width:0; border:1px solid var(--line); padding:1rem; }
+.classification { border-left:4px solid var(--accent); padding:.75rem 1rem; margin:2rem 0; }
+.classification h2 { font-size:1.15rem; }
+.queue-list { max-height:350px; overflow:auto; margin-top:1rem; }
+.queue-item { display:grid; grid-template-columns:100px 1fr 150px; gap:1rem; text-align:left; width:100%; background:#f4f7fc; color:var(--ink); border-bottom:1px solid var(--line); border-radius:0; font-size:.85rem; }
+.queue-item:hover { background:#e7edf8; }
+.queue-item span { overflow-wrap:anywhere; }
+.revision-history li { margin:.75rem 0; }
+.revision-history li span { margin-left:1rem; }
+.review-ack { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; margin-top:1rem; }
+.review-ack p { width:100%; font-size:.85rem; color:var(--muted); }
+.processing-status { padding:1rem; background:#eef3fb; border-radius:.5rem; }
+footer { color:var(--muted); border-top:1px solid var(--line); padding:1.5rem 0; margin-top:2rem; font-size:.85rem; line-height:1.6; }
+@media(max-width:760px) { .workspace-header,.section-heading { flex-direction:column; } .workspace-badge { white-space:normal; } .document-inputs { grid-template-columns:1fr; } .queue-item { grid-template-columns:1fr; gap:.35rem; } .revision-history li span { display:block; margin:.5rem 0; } }

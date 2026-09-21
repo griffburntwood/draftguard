@@ -12,7 +12,7 @@ class TextDocumentInput(BaseModel):
 
     document_id: str = Field(min_length=1)
     attachment_path: str = Field(min_length=1)
-    text: str
+    text: str = Field(max_length=1_000_000)
 
 
 class TextProcessingRequest(BaseModel):
@@ -56,6 +56,9 @@ class TextProcessingResponse(BaseModel):
 
     classification: ClassifiedEmail
     comparison: ComparisonResult | None
+    document_hashes: dict[str, str] = Field(default_factory=dict)
+    submission_entry: dict = Field(default_factory=dict)
+    review_audit: list[dict] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_routing(self):

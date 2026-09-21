@@ -1,6 +1,7 @@
 """Shared response structures for document comparisons."""
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -57,6 +58,7 @@ class ComparisonResult(BaseModel):
     field_results: list[FieldComparison] = Field(min_length=7, max_length=7)
     defect_fields: list[ShipmentField]
     review_reasons: list[str]
+    review_codes: list[Literal["wrong_doc_type", "missing_attachment", "unreadable", "missing_value"]] = Field(default_factory=list)
 
 
     @model_validator(mode="after")

@@ -57,6 +57,9 @@ export type ComparisonResult = {
 }
 
 export type ProcessingResponse = {
+  document_hashes?: Record<string, string>
+  review_audit?: AuditEntry[]
+  submission_entry?: SubmissionEntry
   classification: {
     email: EmailRecord
     category:
@@ -89,4 +92,59 @@ export async function processText(
   }
 
   return response.json()
+}
+
+export type SubmissionEntry = {
+  category: string
+  status: 'OK' | 'MISMATCH' | 'NEEDS_REVIEW'
+  review_reason: string | null
+  has_defect: boolean
+  defect_fields: string[]
+}
+export type AuditEntry = {
+  side: 'si' | 'bl'
+  field: string
+  previous_value: string | number | null
+  value: string | number
+  reviewer: string
+  reason: string
+  timestamp: string
+  original_comparison_id: string
+}
+export type InboxResponse = {
+  submission: Record<string, SubmissionEntry>
+  results: ProcessingResponse[]
+  summary: { emails: number; categories: Record<string, number>; comparison_statuses: Record<string, number>; note: string }
+}
+
+async function post<T>(path: string, body: BodyInit, json = false): Promise<T> {
+  const response = await fetch(apiUrl(path), {
+    method: 'POST', body,
+    headers: json ? { 'Content-Type': 'application/json' } : undefined,
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(typeof payload.detail === 'string' ? payload.detail : `Request failed (${response.status}). Check your inputs and retry.`)
+  }
+  return response.json()
+}
+
+export function processFiles(email: EmailRecord, si: File | null, bl: File | null) {
+  const form = new FormData()
+  form.append('email', JSON.stringify(email))
+  if (si) form.append('si_file', si)
+  if (bl) form.append('bl_file', bl)
+  return post<ProcessingResponse>('/process/files', form)
+}
+
+export function processInbox(bundle: File) {
+  const form = new FormData()
+  form.append('bundle', bundle)
+  return post<InboxResponse>('/process/inbox', form)
+}
+
+export function correctField(original: ProcessingResponse, reviewer: string, reason: string, side: string, field: string, value: string | number) {
+  return post<ProcessingResponse>('/process/review', JSON.stringify({
+    original, reviewer, reason, corrections: [{ side, field, value }],
+  }), true)
 }
