@@ -1,6 +1,8 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from backend.extraction import extract_text_document
+from backend.extraction import extract_document, extract_text_document
 
 
 class TestTextExtraction(unittest.TestCase):
@@ -343,6 +345,82 @@ class TestTextExtraction(unittest.TestCase):
             result.port_of_loading.evidence[0].text,
             "Port of Loading: Singapore"
         )
+
+    def test_extracts_load_port_synonym(self):
+        text = """Shipper: ABC Trading
+                Consignee: XYZ Ltd
+                Notify Party: XYZ Ltd
+                Load Port: Port Klang
+                Port of Discharge: Mersin
+                Container Count: 3
+                Gross Weight: 22000 kg"""
+
+        result = extract_text_document(text, "test_doc_012")
+
+        self.assertEqual(
+            result.port_of_loading.normalized_value,
+            "Port Klang"
+        )
+
+        self.assertEqual(
+            result.port_of_loading.state.value,
+            "extracted"
+        )
+
+    def test_extract_document_reads_txt_file(self):
+        text = """Shipper: ABC Trading
+                Consignee: XYZ Ltd
+                Notify Party: XYZ Ltd
+                Load Port: Port Klang
+                Port of Discharge: Mersin
+                Container Count: 3
+                Gross Weight: 22000 kg"""
+
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "shipment.txt"
+            file_path.write_text(text, encoding="utf-8")
+
+            result = extract_document(file_path, "test_doc_013")
+
+        self.assertEqual(result.document_id, "test_doc_013")
+        self.assertEqual(
+            result.port_of_loading.normalized_value,
+            "Port Klang"
+        )
+        self.assertEqual(
+            result.container_count.normalized_value,
+            3
+        )
+        self.assertEqual(
+            result.gross_weight_kg.normalized_value,
+            22000
+        )
+
+    def test_extract_document_marks_unsupported_formats_as_unreadable(self):
+        for extension in [".pdf", ".docx", ".xlsx"]:
+            with self.subTest(extension=extension):
+                result = extract_document(
+                    f"shipment{extension}",
+                    f"test_{extension}"
+                )
+
+                fields = [
+                    result.shipper,
+                    result.consignee,
+                    result.notify_party,
+                    result.port_of_loading,
+                    result.port_of_discharge,
+                    result.container_count,
+                    result.gross_weight_kg,
+                ]
+
+                for field in fields:
+                    self.assertEqual(
+                        field.state.value,
+                        "unreadable"
+                    )
+                    self.assertIsNone(field.raw_value)
+                    self.assertIsNone(field.normalized_value)
 
 if __name__ == "__main__":
     unittest.main()

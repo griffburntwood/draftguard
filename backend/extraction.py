@@ -1,5 +1,7 @@
 """Plain-text document extraction for DraftGuard."""
 
+from pathlib import Path
+
 from backend.models import (
     ExtractedField,
     ExtractionState,
@@ -7,6 +9,42 @@ from backend.models import (
     SourceEvidence,
 )
 
+def _unreadable_record(document_id: str) -> ShipmentRecord:
+    """Create a shipment record whose fields could not be extracted."""
+
+    def unreadable_field() -> ExtractedField:
+        return ExtractedField(
+            raw_value=None,
+            normalized_value=None,
+            state=ExtractionState.UNREADABLE,
+            evidence=[],
+        )
+
+    return ShipmentRecord(
+        document_id=document_id,
+        shipper=unreadable_field(),
+        consignee=unreadable_field(),
+        notify_party=unreadable_field(),
+        port_of_loading=unreadable_field(),
+        port_of_discharge=unreadable_field(),
+        container_count=unreadable_field(),
+        gross_weight_kg=unreadable_field(),
+    )
+
+def extract_document(path: str | Path, document_id: str) -> ShipmentRecord:
+    """Extract shipment data from a document based on its file type."""
+
+    document_path = Path(path)
+    extension = document_path.suffix.lower()
+
+    if extension == ".txt":
+        text = document_path.read_text(encoding="utf-8")
+        return extract_text_document(text, document_id)
+
+    if extension in {".pdf", ".docx", ".xlsx"}:
+        return _unreadable_record(document_id)
+
+    return _unreadable_record(document_id)
 
 def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
     """Extract the seven required shipment fields from plain text."""
@@ -28,6 +66,7 @@ def extract_text_document(text: str, document_id: str) -> ShipmentRecord:
         ],
         "port_of_loading": [
             "Port of Loading:",
+            "Load Port:",
             "POL:",
         ],
         "port_of_discharge": [
